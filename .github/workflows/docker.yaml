@@ -7,7 +7,7 @@ on:
 
 env:
   ALIYUN_REGISTRY: "${{ secrets.ALIYUN_REGISTRY }}"
-  ALIYUN_NAME_SPACE: "fress"  # 直接写死命名空间
+  ALIYUN_NAME_SPACE: "fress"
   ALIYUN_REGISTRY_USER: "${{ secrets.ALIYUN_REGISTRY_USER }}"
   ALIYUN_REGISTRY_PASSWORD: "${{ secrets.ALIYUN_REGISTRY_PASSWORD }}"
 
@@ -32,11 +32,12 @@ jobs:
       - name: Restart docker
         run: |
           sudo service docker restart
-          sleep 10  # 增加等待时间
+          sleep 10
 
       - name: Configure DNS
         run: |
-          echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
+          echo "nameserver 100.100.2.136" | sudo tee /etc/resolv.conf > /dev/null
+          echo "nameserver 100.100.2.138" | sudo tee -a /etc/resolv.conf > /dev/null
 
       - name: Test network connectivity
         run: |
@@ -44,45 +45,25 @@ jobs:
           echo "注册表地址: $ALIYUN_REGISTRY"
           echo "DNS 解析结果:"
           dig $ALIYUN_REGISTRY +short
-          echo "HTTPS 连接测试:"
-          curl -vI --connect-timeout 15 https://$ALIYUN_REGISTRY || true
+          echo "测试 443 端口:"
+          nc -zv $ALIYUN_REGISTRY 443
+          echo "测试 HTTPS 连接:"
+          curl -vI --connect-timeout 15 https://$ALIYUN_REGISTRY
 
       - name: Build and push image Aliyun
         run: |
           echo "阿里云注册表地址: $ALIYUN_REGISTRY"
-          echo "命名空间: $ALIYUN_NAME_SPACE"
           echo "用户名: $ALIYUN_REGISTRY_USER"
           
-          echo "尝试登录阿里云镜像仓库..."
+          echo "尝试登录..."
           echo "$ALIYUN_REGISTRY_PASSWORD" | docker login -u "$ALIYUN_REGISTRY_USER" --password-stdin "$ALIYUN_REGISTRY" || {
-            echo "登录失败！请检查："
-            echo "1. Registry 地址是否与实例地址完全一致"
-            echo "2. 用户名和密码是否正确"
+            echo "登录失败！可能原因："
+            echo "1. Registry 地址错误（当前值：$ALIYUN_REGISTRY）"
+            echo "2. 用户名或密码错误"
             exit 1
           }
 
-          # 后续镜像处理逻辑（保持原有脚本）
-          declare -A duplicate_images
-          declare -A temp_map
-          while IFS= read -r line || [ -n "$line" ]; do
-              [[ -z "$line" ]] && continue
-              if echo "$line" | grep -q '^\s*#'; then
-                  continue
-              fi
-              
-              image=$(echo "$line" | awk '{print $NF}')
-              image="${image%%@*}"
-              echo "处理镜像: $image"
-              # ... 其余逻辑不变 ...
-          done < images.txt
-          
-          while IFS= read -r line || [ -n "$line" ]; do
-              [[ -z "$line" ]] && continue
-              if echo "$line" | grep -q '^\s*#'; then
-                  continue
-              fi
-          
-              echo "拉取镜像: $line"
-              docker pull $line
-              # ... 其余逻辑不变 ...
-          done < images.txt
+          # 示例：推送一个测试镜像
+          docker pull nginx:latest
+          docker tag nginx:latest "$ALIYUN_REGISTRY/$ALIYUN_NAME_SPACE/nginx:test"
+          docker push "$ALIYUN_REGISTRY/$ALIYUN_NAME_SPACE/nginx:test"
