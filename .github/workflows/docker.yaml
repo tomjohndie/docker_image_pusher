@@ -36,22 +36,19 @@ jobs:
 
       - name: Configure DNS
         run: |
-          echo "nameserver 1.1.1.1" | sudo tee /etc/resolv.conf > /dev/null
-          echo "nameserver 1.0.0.1" | sudo tee -a /etc/resolv.conf > /dev/null
+          echo "nameserver 223.5.5.5" | sudo tee /etc/resolv.conf > /dev/null
+          echo "nameserver 223.6.6.6" | sudo tee -a /etc/resolv.conf > /dev/null
 
       - name: Test network connectivity
         run: |
           echo "测试阿里云镜像仓库的网络连通性..."
           echo "注册表地址: $ALIYUN_REGISTRY"
           
-          # 使用 dig 指定 DNS 服务器
           echo "DNS 解析结果:"
-          dig @1.1.1.1 $ALIYUN_REGISTRY +short
+          dig @223.5.5.5 $ALIYUN_REGISTRY +trace
           
-          # 测试 IP 直连（替换为本地解析的 IP）
-          echo "测试 IP 直连:"
-          nc -zv 139.196.71.17 443
-          curl -kIv --connect-timeout 15 https://139.196.71.17
+          echo "测试 HTTPS 连接:"
+          curl -kIv --connect-timeout 15 https://$ALIYUN_REGISTRY
 
       - name: Build and push image Aliyun
         run: |
@@ -66,7 +63,7 @@ jobs:
             exit 1
           }
 
-          # 示例：推送一个测试镜像
+          # 示例：推送测试镜像
           docker pull nginx:latest
           docker tag nginx:latest "$ALIYUN_REGISTRY/$ALIYUN_NAME_SPACE/nginx:test"
           docker push "$ALIYUN_REGISTRY/$ALIYUN_NAME_SPACE/nginx:test"
