@@ -48,10 +48,16 @@ jobs:
       - name: Docker Setup Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Test network connectivity
+        run: |
+          echo "测试阿里云镜像仓库的网络连通性..."
+          nslookup $ALIYUN_REGISTRY
+          curl -I https://$ALIYUN_REGISTRY
+
       - name: Build and push image Aliyun
         run: |
-          # 直接使用宿主机 Docker 登录
-          docker login -u $ALIYUN_REGISTRY_USER -p $ALIYUN_REGISTRY_PASSWORD $ALIYUN_REGISTRY
+          # 安全登录到阿里云镜像仓库（使用 --password-stdin 避免密码暴露）
+          echo "$ALIYUN_REGISTRY_PASSWORD" | docker login -u $ALIYUN_REGISTRY_USER --password-stdin $ALIYUN_REGISTRY
 
           # 后续的镜像处理逻辑
           declare -A duplicate_images
