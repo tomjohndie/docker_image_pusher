@@ -6,8 +6,8 @@ on:
     branches: [ main ]
 
 env:
-  ALIYUN_REGISTRY: "${{ secrets.ALIYUN_REGISTRY }}"
-  ALIYUN_NAME_SPACE: "${{ secrets.ALIYUN_NAME_SPACE }}"
+  ALIYUN_REGISTRY: "${{ secrets.ALIYUN_REGISTRY }}"  # 对应你的 Registry 实例地址
+  ALIYUN_NAME_SPACE: "fress"  # 直接写死命名空间
   ALIYUN_REGISTRY_USER: "${{ secrets.ALIYUN_REGISTRY_USER }}"
   ALIYUN_REGISTRY_PASSWORD: "${{ secrets.ALIYUN_REGISTRY_PASSWORD }}"
 
@@ -16,31 +16,33 @@ jobs:
     name: Pull
     runs-on: ubuntu-latest
     steps:
-      - name: Before freeing up disk space
-        run: |
-          echo "Before freeing up disk space"
-          echo "=============================================================================="
-          df -hT
-          echo "=============================================================================="
+      # ... 其他步骤保持不变 ...
 
-      - name: Maximize build space
-        uses: easimon/maximize-build-space@master
-        with:
-          root-reserve-mb: 2048
-          swap-size-mb: 128
-          remove-dotnet: 'true'
-          remove-haskell: 'true'
-          build-mount-path: '/var/lib/docker/'
-
-      - name: Restart docker
+      - name: Test network connectivity
         run: |
-          sudo service docker restart
-          sleep 5  # 等待 Docker 服务完全启动
+          echo "测试阿里云镜像仓库的网络连通性..."
+          echo "注册表地址: $ALIYUN_REGISTRY"
+          nslookup $ALIYUN_REGISTRY || true
+          curl -vI https://$ALIYUN_REGISTRY || true
 
-      - name: Free up disk space complete
+      - name: Build and push image Aliyun
         run: |
-          echo "Free up disk space complete"
-          echo "=============================================================================="
+          # 调试输出变量值
+          echo "阿里云注册表地址: $ALIYUN_REGISTRY"
+          echo "命名空间: $ALIYUN_NAME_SPACE"
+          echo "用户名: $ALIYUN_REGISTRY_USER"
+          
+          # 安全登录
+          echo "尝试登录阿里云镜像仓库..."
+          echo "$ALIYUN_REGISTRY_PASSWORD" | docker login -u "$ALIYUN_REGISTRY_USER" --password-stdin "$ALIYUN_REGISTRY" || {
+            echo "登录失败！请检查："
+            echo "1. ALIYUN_REGISTRY 是否与你的 Registry 实例地址完全一致"
+            echo "2. 用户名和密码是否正确"
+            exit 1
+          }
+
+          # 后续的镜像处理逻辑保持不变
+          # ...（原有脚本内容）... "=============================================================================="
           df -hT
           echo "=============================================================================="
 
