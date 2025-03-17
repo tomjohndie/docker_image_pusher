@@ -33,7 +33,9 @@ jobs:
           build-mount-path: '/var/lib/docker/'
 
       - name: Restart docker
-        run: sudo service docker restart
+        run: |
+          sudo service docker restart
+          sleep 5  # 等待 Docker 服务完全启动
 
       - name: Free up disk space complete
         run: |
@@ -51,13 +53,25 @@ jobs:
       - name: Test network connectivity
         run: |
           echo "测试阿里云镜像仓库的网络连通性..."
-          nslookup $ALIYUN_REGISTRY
-          curl -I https://$ALIYUN_REGISTRY
+          echo "注册表地址: $ALIYUN_REGISTRY"
+          nslookup $ALIYUN_REGISTRY || true
+          curl -vI https://$ALIYUN_REGISTRY || true
 
       - name: Build and push image Aliyun
         run: |
-          # 安全登录到阿里云镜像仓库（使用 --password-stdin 避免密码暴露）
-          echo "$ALIYUN_REGISTRY_PASSWORD" | docker login -u $ALIYUN_REGISTRY_USER --password-stdin $ALIYUN_REGISTRY
+          # 调试输出变量值（确保 Secrets 已正确设置）
+          echo "阿里云注册表地址: $ALIYUN_REGISTRY"
+          echo "命名空间: $ALIYUN_NAME_SPACE"
+          echo "用户名: $ALIYUN_REGISTRY_USER"
+          
+          # 安全登录到阿里云镜像仓库
+          echo "尝试登录阿里云镜像仓库..."
+          echo "$ALIYUN_REGISTRY_PASSWORD" | docker login -u "$ALIYUN_REGISTRY_USER" --password-stdin "$ALIYUN_REGISTRY" || {
+            echo "登录失败！请检查以下内容："
+            echo "1. Secrets 中的 ALIYUN_REGISTRY 是否格式正确（例如 registry.cn-hangzhou.aliyuncs.com）"
+            echo "2. ALIYUN_REGISTRY_USER 和 ALIYUN_REGISTRY_PASSWORD 是否正确"
+            exit 1
+          }
 
           # 后续的镜像处理逻辑
           declare -A duplicate_images
