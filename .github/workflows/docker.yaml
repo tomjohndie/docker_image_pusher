@@ -36,22 +36,22 @@ jobs:
 
       - name: Configure DNS
         run: |
-          echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
-          echo "nameserver 8.8.4.4" | sudo tee -a /etc/resolv.conf > /dev/null
+          echo "nameserver 1.1.1.1" | sudo tee /etc/resolv.conf > /dev/null
+          echo "nameserver 1.0.0.1" | sudo tee -a /etc/resolv.conf > /dev/null
 
       - name: Test network connectivity
         run: |
           echo "测试阿里云镜像仓库的网络连通性..."
           echo "注册表地址: $ALIYUN_REGISTRY"
           
+          # 使用 dig 指定 DNS 服务器
           echo "DNS 解析结果:"
-          nslookup $ALIYUN_REGISTRY 8.8.8.8
+          dig @1.1.1.1 $ALIYUN_REGISTRY +short
           
-          echo "测试 443 端口:"
-          nc -zv $ALIYUN_REGISTRY 443
-          
-          echo "测试 HTTPS 连接:"
-          curl -kIv --connect-timeout 15 https://$ALIYUN_REGISTRY
+          # 测试 IP 直连（替换为本地解析的 IP）
+          echo "测试 IP 直连:"
+          nc -zv 139.196.71.17 443
+          curl -kIv --connect-timeout 15 https://139.196.71.17
 
       - name: Build and push image Aliyun
         run: |
